@@ -46,9 +46,6 @@ public:
 	void setFormat(int formatId);
 	int format() const;
 
-signals:
-	void formatsChanged();
-
 private:
 	Display *getDpy() const;
 	bool hasXvExtension() const;

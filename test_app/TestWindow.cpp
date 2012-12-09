@@ -14,7 +14,6 @@ TestWindow::TestWindow(QWidget *parent):
 	setCentralWidget(m_xv);
 	setupMenu();
 	setupAdaptors();
-	connect(m_xv, SIGNAL(formatsChanged()), SLOT(updateFormats()));
 }
 
 TestWindow::~TestWindow()
@@ -48,6 +47,7 @@ void TestWindow::setupAdaptors()
 void TestWindow::changeAdaptor(QAction *adaptor)
 {
 	m_xv->setAdaptor(adaptor->data().value<XvPortID>());
+	updateFormats();
 }
 
 void TestWindow::changeFormat(QAction *format)

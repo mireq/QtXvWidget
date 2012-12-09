@@ -241,26 +241,27 @@ void QtXvWidget::updateFormats()
 	m_formats.clear();
 	int count = 0;
 	XvImageFormatValues *formats = XvListImageFormats(getDpy(), m_port, &count);
-	for (int i = 0; i < count; ++i) {
-		if (formats[i].type == XvRGB) {
-			for (unsigned int j = 0; j < sizeof(rgb_formatsLookup) / sizeof(RgbFormatInfo); ++j) {
-				if (formats[i] == rgb_formatsLookup[j]) {
-					m_formats.append(PixelFormat(formats[i].id, rgb_formatsLookup[j].pixelFormat));
+	if (formats) {
+		for (int i = 0; i < count; ++i) {
+			if (formats[i].type == XvRGB) {
+				for (unsigned int j = 0; j < sizeof(rgb_formatsLookup) / sizeof(RgbFormatInfo); ++j) {
+					if (formats[i] == rgb_formatsLookup[j]) {
+						m_formats.append(PixelFormat(formats[i].id, rgb_formatsLookup[j].pixelFormat));
+					}
+				}
+			}
+			else if (formats[i].type == XvYUV) {
+				for (unsigned int j = 0; j < sizeof(yuv_formatsLookup) / sizeof(YuvFormatInfo); ++j) {
+					if (formats[i] == yuv_formatsLookup[j]) {
+						m_formats.append(PixelFormat(formats[i].id, yuv_formatsLookup[j].pixelFormat));
+					}
 				}
 			}
 		}
-		else if (formats[i].type == XvYUV) {
-			for (unsigned int j = 0; j < sizeof(yuv_formatsLookup) / sizeof(YuvFormatInfo); ++j) {
-				if (formats[i] == yuv_formatsLookup[j]) {
-					m_formats.append(PixelFormat(formats[i].id, yuv_formatsLookup[j].pixelFormat));
-				}
-			}
+		XFree(formats);
+		if (m_formats.count()) {
+			setFormat(m_formats.first().id);
 		}
 	}
-	XFree(formats);
-	if (m_formats.count()) {
-		setFormat(m_formats.first().id);
-	}
-	emit formatsChanged();
 }
 
