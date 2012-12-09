@@ -4,6 +4,7 @@ TEMPLATE = lib
 LIBS += -lXv\
 	-lX11
 DEFINES += QTXV_LIBRARY
+QT += multimedia
 SOURCES += QtXvWidget.cpp\
 	QtXvWidgetPlugin.cpp\
 
