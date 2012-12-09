@@ -35,8 +35,21 @@ public:
 		QVideoFrame::PixelFormat format;
 		QString name() const;
 	};
+	enum AttributeFlag {
+		NoFlag = 0x00,
+		ReadFlag = 0x01,
+		WriteFlag = 0x02
+	};
+	Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
+	struct AttributeInfo {
+		QString name;
+		int min;
+		int max;
+		AttributeFlags flags;
+	};
 	typedef QList<AdaptorInfo> AdaptorList;
 	typedef QList<PixelFormat> FormatList;
+	typedef QList<AttributeInfo> AttributeList;
 
 	QtXvWidget(QWidget *parent = 0);
 	~QtXvWidget();
@@ -45,6 +58,9 @@ public:
 	void setAdaptor(XvPortID baseId);
 	void setFormat(int formatId);
 	int format() const;
+	AttributeList attributes() const;
+	void setAttribute(const QString &attribute, int value);
+	int getAttribute(const QString &attribute) const;
 
 private:
 	Display *getDpy() const;

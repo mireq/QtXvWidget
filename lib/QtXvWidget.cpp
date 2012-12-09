@@ -170,6 +170,9 @@ QtXvWidget::FormatList QtXvWidget::formats() const
 
 void QtXvWidget::setAdaptor(XvPortID baseId)
 {
+	if (!m_xvInitialized) {
+		return;
+	}
 	ungrabPort();
 	foreach (const AdaptorInfo &adaptor, adaptors()) {
 		if (adaptor.baseId == baseId) {
@@ -201,6 +204,58 @@ void QtXvWidget::setFormat(int formatId)
 int QtXvWidget::format() const
 {
 	return m_format;
+}
+
+QtXvWidget::AttributeList QtXvWidget::attributes() const
+{
+	AttributeList retAttributes;
+	if (!m_xvInitialized || m_port == 0) {
+		return retAttributes;
+	}
+
+	int count = 0;
+	XvAttribute *attributes = XvQueryPortAttributes(getDpy(), m_port, &count);
+	if (!attributes) {
+		return retAttributes;
+	}
+
+	for (int i = 0; i < count; ++i) {
+		XvAttribute attr = attributes[i];
+		AttributeFlags flags = NoFlag;
+		if (attr.flags & XvGettable) {
+			flags |= ReadFlag;
+		}
+		if (attr.flags & XvSettable) {
+			flags |= WriteFlag;
+		}
+		AttributeInfo info = { attr.name, attr.min_value, attr.max_value, flags };
+		retAttributes.append(info);
+	}
+
+	XFree(attributes);
+	return retAttributes;
+}
+
+void QtXvWidget::setAttribute(const QString &attribute, int value)
+{
+	if (!m_xvInitialized || m_port == 0) {
+		return;
+	}
+
+	Atom atom = XInternAtom(getDpy(), attribute.toStdString().c_str(), True);
+	XvSetPortAttribute(getDpy(), m_port, atom, value);
+}
+
+int QtXvWidget::getAttribute(const QString &attribute) const
+{
+	if (!m_xvInitialized || m_port == 0) {
+		return 0;
+	}
+
+	Atom atom = XInternAtom(getDpy(), attribute.toStdString().c_str(), True);
+	int value = 0;
+	XvGetPortAttribute(getDpy(), m_port, atom, &value);
+	return value;
 }
 
 Display *QtXvWidget::getDpy() const
