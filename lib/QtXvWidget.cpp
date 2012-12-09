@@ -22,6 +22,43 @@ QtXvWidget::~QtXvWidget()
 {
 }
 
+QtXvWidget::AdaptorList QtXvWidget::getAdaptors() const
+{
+	AdaptorList list;
+	if (!m_xvInitialized) {
+		return list;
+	}
+
+	XvAdaptorInfo *adaptorInfo = 0;
+	unsigned int count = 0;
+	if (XvQueryAdaptors(getDpy(), DefaultRootWindow(getDpy()), &count, &adaptorInfo) != Success) {
+		qCritical("Could not get adaptors!");
+		return list;
+	}
+
+	for (unsigned int adaptor = 0; adaptor < count; ++adaptor) {
+		AdaptorInfo info;
+		XvAdaptorInfo *current = adaptorInfo + adaptor;
+		info.baseId = QVariant::fromValue<qlonglong>(current->base_id);
+		info.name = QString(current->name);
+		info.numPorts = current->num_ports;
+		list.append(info);
+	}
+
+	return list;
+}
+
+void QtXvWidget::setAdaptor(QVariant baseId)
+{
+	AdaptorList adaptors = getAdaptors();
+	foreach (const AdaptorInfo &adaptor, adaptors) {
+		if (adaptor.baseId == baseId) {
+			return;
+		}
+	}
+	qCritical("Bad base ID");
+}
+
 Display *QtXvWidget::getDpy() const
 {
 	Display *dpy = x11Info().display();
