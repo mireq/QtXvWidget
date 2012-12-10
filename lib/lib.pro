@@ -6,9 +6,11 @@ LIBS += -lXv\
 DEFINES += QTXV_LIBRARY
 QT += multimedia
 SOURCES += QtXvWidget.cpp\
+	QtXvControlsWidget.cpp\
 	QtXvWidgetPlugin.cpp\
 
 HEADERS += QtXvWidget.h\
+	QtXvControlsWidget.h\
 	QtXvWidgetPlugin.h
 
 unix:!symbian {

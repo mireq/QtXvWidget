@@ -180,6 +180,7 @@ void QtXvWidget::setAdaptor(XvPortID baseId)
 				if (XvGrabPort(getDpy(), port, CurrentTime) == Success) {
 					m_port = port;
 					updateFormats();
+					emit portChanged(m_port);
 					return;
 				}
 			}
@@ -204,6 +205,11 @@ void QtXvWidget::setFormat(int formatId)
 int QtXvWidget::format() const
 {
 	return m_format;
+}
+
+XvPortID QtXvWidget::port() const
+{
+	return m_port;
 }
 
 QtXvWidget::AttributeList QtXvWidget::attributes() const
@@ -285,7 +291,10 @@ void QtXvWidget::ungrabPort()
 		return;
 	}
 	XvUngrabPort(getDpy(), m_port, CurrentTime);
-	m_port = 0;
+	if (m_port != 0) {
+		m_port = 0;
+		emit portChanged(m_port);
+	}
 	m_format = 0;
 	m_formats.clear();
 }

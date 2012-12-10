@@ -1,8 +1,10 @@
 #include <QAction>
 #include <QMenuBar>
 #include <QMetaObject>
+#include <QHBoxLayout>
 #include <QVideoFrame>
 #include "QtXvWidget.h"
+#include "QtXvControlsWidget.h"
 #include "TestWindow.h"
 
 #include <QDebug>
@@ -11,7 +13,13 @@ TestWindow::TestWindow(QWidget *parent):
 	QMainWindow(parent),
 	m_xv(new QtXvWidget(this))
 {
-	setCentralWidget(m_xv);
+	QWidget *centralWidget = new QWidget();
+	QHBoxLayout *layout = new QHBoxLayout();
+	layout->addWidget(m_xv);
+	layout->addWidget(new QtXvControlsWidget(m_xv));
+	centralWidget->setLayout(layout);
+	setCentralWidget(centralWidget);
+
 	setupMenu();
 	setupAdaptors();
 }

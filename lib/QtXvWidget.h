@@ -58,9 +58,13 @@ public:
 	void setAdaptor(XvPortID baseId);
 	void setFormat(int formatId);
 	int format() const;
+	XvPortID port() const;
 	AttributeList attributes() const;
 	void setAttribute(const QString &attribute, int value);
 	int getAttribute(const QString &attribute) const;
+
+signals:
+	void portChanged(XvPortID port);
 
 private:
 	Display *getDpy() const;
