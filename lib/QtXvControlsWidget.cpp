@@ -35,7 +35,7 @@ void QtXvControlsWidget::updateControls()
 	}
 
 	int row = 0;
-	QtXvWidget::AttributeList attributes = m_xv->attributes();
+	QtXvWidget::AttributeList attributes = m_xv->xvAttributes();
 	foreach (const QtXvWidget::AttributeInfo &attribute, attributes) {
 		if (!(attribute.flags & QtXvWidget::ReadFlag) || !(attribute.flags & QtXvWidget::WriteFlag)) {
 			continue;
@@ -51,7 +51,7 @@ void QtXvControlsWidget::updateControls()
 
 		connect(slider, SIGNAL(valueChanged(int)), spinBox, SLOT(setValue(int)));
 		connect(spinBox, SIGNAL(valueChanged(int)), slider, SLOT(setValue(int)));
-		spinBox->setValue(m_xv->getAttribute(attribute.name));
+		spinBox->setValue(m_xv->getXvAttribute(attribute.name));
 		spinBox->setProperty("xvAttribute", QVariant::fromValue<QString>(attribute.name));
 		connect(spinBox, SIGNAL(valueChanged(int)), m_mapper, SLOT(map()));
 		m_mapper->setMapping(spinBox, attribute.name);
@@ -68,7 +68,7 @@ void QtXvControlsWidget::valueChanged(const QString &attribute)
 	for (int i = 0; i < m_layout->count(); ++i) {
 		QLayoutItem *item = m_layout->itemAt(i);
 		if (item->widget() && item->widget()->property("xvAttribute") == attribute) {
-			m_xv->setAttribute(attribute, item->widget()->property("value").value<int>());
+			m_xv->setXvAttribute(attribute, item->widget()->property("value").value<int>());
 		}
 	}
 }

@@ -1,10 +1,13 @@
 #include <QAction>
+#include <QEvent>
+#include <QHBoxLayout>
 #include <QMenuBar>
 #include <QMetaObject>
-#include <QHBoxLayout>
+#include <QResizeEvent>
 #include <QVideoFrame>
-#include "QtXvWidget.h"
 #include "QtXvControlsWidget.h"
+#include "QtXvTestImage.h"
+#include "QtXvWidget.h"
 #include "TestWindow.h"
 
 #include <QDebug>
@@ -22,6 +25,8 @@ TestWindow::TestWindow(QWidget *parent):
 
 	setupMenu();
 	setupAdaptors();
+
+	m_xv->installEventFilter(this);
 }
 
 TestWindow::~TestWindow()
@@ -50,6 +55,21 @@ void TestWindow::setupAdaptors()
 		m_adaptorGroup->addAction(action);
 		m_adaptors->addAction(action);
 	}
+}
+
+bool TestWindow::eventFilter(QObject *obj, QEvent *event)
+{
+	if (event->type() == QEvent::Resize) {
+		if (m_xv->pixelFormat() == QVideoFrame::Format_Invalid) {
+			return false;
+		}
+		QSize size = static_cast<QResizeEvent *>(event)->size();
+		QVideoFrame frame(size.width() * size.height() * 2, size, size.width() * 2, m_xv->pixelFormat());
+		frame.map(QAbstractVideoBuffer::ReadWrite);
+		m_xv->present(frame);
+		return false;
+	}
+	return QObject::eventFilter(obj, event);
 }
 
 void TestWindow::changeAdaptor(QAction *adaptor)

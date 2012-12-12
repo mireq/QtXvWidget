@@ -53,15 +53,19 @@ public:
 
 	QtXvWidget(QWidget *parent = 0);
 	~QtXvWidget();
+
 	AdaptorList adaptors() const;
 	FormatList formats() const;
+	AttributeList xvAttributes() const;
+
 	void setAdaptor(XvPortID baseId);
-	void setFormat(int formatId);
 	int format() const;
+	void setFormat(int formatId);
+	QVideoFrame::PixelFormat pixelFormat() const;
 	XvPortID port() const;
-	AttributeList attributes() const;
-	void setAttribute(const QString &attribute, int value);
-	int getAttribute(const QString &attribute) const;
+	void setXvAttribute(const QString &attribute, int value);
+	int getXvAttribute(const QString &attribute) const;
+	bool present(const QVideoFrame &frame);
 
 signals:
 	void portChanged(XvPortID port);
@@ -69,13 +73,18 @@ signals:
 private:
 	Display *getDpy() const;
 	bool hasXvExtension() const;
+	void freeXvImage();
 	void ungrabPort();
 	void updateFormats();
+	void setFormat(const PixelFormat &format);
+	void clearFormat();
 
 private:
 	bool m_xvInitialized;
 	XvPortID m_port;
 	int m_format;
+	QVideoFrame::PixelFormat m_pixelFormat;
+	XvImage *m_xvImage;
 	FormatList m_formats;
 };
 

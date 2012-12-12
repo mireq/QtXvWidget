@@ -122,8 +122,11 @@ QtXvWidget::QtXvWidget(QWidget *parent):
 	QWidget(parent),
 	m_xvInitialized(false),
 	m_port(0),
-	m_format(0)
+	m_format(0),
+	m_pixelFormat(QVideoFrame::Format_Invalid),
+	m_xvImage(0)
 {
+	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	if (!getDpy() || !hasXvExtension()) {
 		return;
 	}
@@ -132,6 +135,7 @@ QtXvWidget::QtXvWidget(QWidget *parent):
 
 QtXvWidget::~QtXvWidget()
 {
+	freeXvImage();
 	ungrabPort();
 }
 
@@ -168,51 +172,7 @@ QtXvWidget::FormatList QtXvWidget::formats() const
 	return m_formats;
 }
 
-void QtXvWidget::setAdaptor(XvPortID baseId)
-{
-	if (!m_xvInitialized) {
-		return;
-	}
-	ungrabPort();
-	foreach (const AdaptorInfo &adaptor, adaptors()) {
-		if (adaptor.baseId == baseId) {
-			for (XvPortID port = baseId; port < (baseId + adaptor.numPorts); ++port) {
-				if (XvGrabPort(getDpy(), port, CurrentTime) == Success) {
-					m_port = port;
-					updateFormats();
-					emit portChanged(m_port);
-					return;
-				}
-			}
-			qCritical("No suitable port");
-			return;
-		}
-	}
-	qCritical("Bad base ID");
-}
-
-void QtXvWidget::setFormat(int formatId)
-{
-	foreach (const PixelFormat &format, m_formats) {
-		if (format.id == formatId) {
-			m_format = formatId;
-			return;
-		}
-	}
-	qCritical("Could not find format!");
-}
-
-int QtXvWidget::format() const
-{
-	return m_format;
-}
-
-XvPortID QtXvWidget::port() const
-{
-	return m_port;
-}
-
-QtXvWidget::AttributeList QtXvWidget::attributes() const
+QtXvWidget::AttributeList QtXvWidget::xvAttributes() const
 {
 	AttributeList retAttributes;
 	if (!m_xvInitialized || m_port == 0) {
@@ -242,7 +202,56 @@ QtXvWidget::AttributeList QtXvWidget::attributes() const
 	return retAttributes;
 }
 
-void QtXvWidget::setAttribute(const QString &attribute, int value)
+void QtXvWidget::setAdaptor(XvPortID baseId)
+{
+	if (!m_xvInitialized) {
+		return;
+	}
+	ungrabPort();
+	foreach (const AdaptorInfo &adaptor, adaptors()) {
+		if (adaptor.baseId == baseId) {
+			for (XvPortID port = baseId; port < (baseId + adaptor.numPorts); ++port) {
+				if (XvGrabPort(getDpy(), port, CurrentTime) == Success) {
+					m_port = port;
+					updateFormats();
+					emit portChanged(m_port);
+					return;
+				}
+			}
+			qCritical("No suitable port");
+			return;
+		}
+	}
+	qCritical("Bad base ID");
+}
+
+int QtXvWidget::format() const
+{
+	return m_format;
+}
+
+void QtXvWidget::setFormat(int formatId)
+{
+	foreach (const PixelFormat &format, m_formats) {
+		if (format.id == formatId) {
+			setFormat(format);
+			return;
+		}
+	}
+	qCritical("Could not find format!");
+}
+
+QVideoFrame::PixelFormat QtXvWidget::pixelFormat() const
+{
+	return m_pixelFormat;
+}
+
+XvPortID QtXvWidget::port() const
+{
+	return m_port;
+}
+
+void QtXvWidget::setXvAttribute(const QString &attribute, int value)
 {
 	if (!m_xvInitialized || m_port == 0) {
 		return;
@@ -252,7 +261,7 @@ void QtXvWidget::setAttribute(const QString &attribute, int value)
 	XvSetPortAttribute(getDpy(), m_port, atom, value);
 }
 
-int QtXvWidget::getAttribute(const QString &attribute) const
+int QtXvWidget::getXvAttribute(const QString &attribute) const
 {
 	if (!m_xvInitialized || m_port == 0) {
 		return 0;
@@ -262,6 +271,26 @@ int QtXvWidget::getAttribute(const QString &attribute) const
 	int value = 0;
 	XvGetPortAttribute(getDpy(), m_port, atom, &value);
 	return value;
+}
+
+bool QtXvWidget::present(const QVideoFrame &frame)
+{
+	if (!m_xvInitialized || m_port == 0 || frame.pixelFormat() != m_pixelFormat || frame.bits() == 0) {
+		return false;
+	}
+
+	if (m_xvImage && (m_xvImage->width != frame.width() || m_xvImage->height != frame.height())) {
+		freeXvImage();
+	}
+	if (m_xvImage == 0) {
+		m_xvImage = XvCreateImage(getDpy(), m_port, m_format, const_cast<char *>(reinterpret_cast<const char *>(frame.bits())), frame.width(), frame.height());
+	}
+
+	XGCValues xgcv;
+	GC gc = XCreateGC(getDpy(), winId(), 0L, &xgcv);
+	XvPutImage(getDpy(), m_port, winId(), gc, m_xvImage, 0, 0, m_xvImage->width, m_xvImage->height, 0, 0, width(), height());
+	XFreeGC(getDpy(), gc);
+	return true;
 }
 
 Display *QtXvWidget::getDpy() const
@@ -285,6 +314,14 @@ bool QtXvWidget::hasXvExtension() const
 	}
 }
 
+void QtXvWidget::freeXvImage()
+{
+	if (m_xvImage != 0) {
+		XFree(m_xvImage);
+		m_xvImage = 0;
+	}
+}
+
 void QtXvWidget::ungrabPort()
 {
 	if (!m_xvInitialized || m_port == 0) {
@@ -295,14 +332,14 @@ void QtXvWidget::ungrabPort()
 		m_port = 0;
 		emit portChanged(m_port);
 	}
-	m_format = 0;
-	m_formats.clear();
+	clearFormat();
+	m_pixelFormat = QVideoFrame::Format_Invalid;
 }
 
 void QtXvWidget::updateFormats()
 {
-	m_format = 0;
-	m_formats.clear();
+	clearFormat();
+	m_pixelFormat = QVideoFrame::Format_Invalid;
 	int count = 0;
 	XvImageFormatValues *formats = XvListImageFormats(getDpy(), m_port, &count);
 	if (formats) {
@@ -327,5 +364,23 @@ void QtXvWidget::updateFormats()
 			setFormat(m_formats.first().id);
 		}
 	}
+}
+
+void QtXvWidget::setFormat(const PixelFormat &format)
+{
+	m_format = format.id;
+	m_pixelFormat = format.format;
+
+	setAttribute(Qt::WA_PaintOnScreen, true);
+	setAttribute(Qt::WA_NoSystemBackground, true);
+}
+
+void QtXvWidget::clearFormat()
+{
+	m_format = 0;
+	m_pixelFormat = QVideoFrame::Format_Invalid;
+
+	setAttribute(Qt::WA_PaintOnScreen, false);
+	setAttribute(Qt::WA_NoSystemBackground, false);
 }
 
