@@ -7,10 +7,12 @@ DEFINES += QTXV_LIBRARY
 QT += multimedia
 SOURCES += QtXvWidget.cpp\
 	QtXvControlsWidget.cpp\
+	QtXvTestImage.cpp\
 	QtXvWidgetPlugin.cpp\
 
 HEADERS += QtXvWidget.h\
 	QtXvControlsWidget.h\
+	QtXvTestImage.h\
 	QtXvWidgetPlugin.h
 
 unix:!symbian {
