@@ -63,7 +63,7 @@ bool TestWindow::eventFilter(QObject *obj, QEvent *event)
 		QSize size = static_cast<QResizeEvent *>(event)->size();
 		int w = size.width();
 		int h = size.height();
-		int lineLen = w + w % 2;
+		int lineLen = w;
 		QVideoFrame::PixelFormat fmt = m_xv->pixelFormat();
 		if (w == 0 || h == 0 || fmt == QVideoFrame::Format_Invalid) {
 			return false;
@@ -71,6 +71,7 @@ bool TestWindow::eventFilter(QObject *obj, QEvent *event)
 		QVideoFrame frame;
 		QImage img = QtXvTestImage().generateImage(w, h);
 		if (fmt == QVideoFrame::Format_YUYV) {
+			lineLen = w + w % 2;
 			frame = QVideoFrame(lineLen * h * 2, size, lineLen * 2, fmt);
 			frame.map(QAbstractVideoBuffer::ReadWrite);
 			size_t offset = 0;
