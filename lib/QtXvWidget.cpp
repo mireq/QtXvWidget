@@ -1,3 +1,4 @@
+#include <QApplication>
 #include "QtXvWidget.h"
 
 
@@ -259,6 +260,7 @@ void QtXvWidget::setXvAttribute(const QString &attribute, int value)
 
 	Atom atom = XInternAtom(getDpy(), attribute.toStdString().c_str(), True);
 	XvSetPortAttribute(getDpy(), m_port, atom, value);
+	present(m_frame);
 }
 
 int QtXvWidget::getXvAttribute(const QString &attribute) const
@@ -275,6 +277,7 @@ int QtXvWidget::getXvAttribute(const QString &attribute) const
 
 bool QtXvWidget::present(const QVideoFrame &frame)
 {
+	m_frame = frame;
 	if (!m_xvInitialized || m_port == 0 || frame.pixelFormat() != m_pixelFormat || frame.bits() == 0) {
 		return false;
 	}
@@ -284,12 +287,13 @@ bool QtXvWidget::present(const QVideoFrame &frame)
 	}
 	if (m_xvImage == 0) {
 		m_xvImage = XvCreateImage(getDpy(), m_port, m_format, const_cast<char *>(reinterpret_cast<const char *>(frame.bits())), frame.width(), frame.height());
+		XGCValues xgcv;
+		m_gc = XCreateGC(getDpy(), winId(), 0L, &xgcv);
 	}
 
-	XGCValues xgcv;
-	GC gc = XCreateGC(getDpy(), winId(), 0L, &xgcv);
-	XvPutImage(getDpy(), m_port, winId(), gc, m_xvImage, 0, 0, m_xvImage->width, m_xvImage->height, 0, 0, width(), height());
-	XFreeGC(getDpy(), gc);
+	XvPutImage(getDpy(), m_port, winId(), m_gc, m_xvImage, 0, 0, m_xvImage->width, m_xvImage->height, 0, 0, width(), height());
+
+	qApp->syncX();
 	return true;
 }
 
@@ -317,6 +321,7 @@ bool QtXvWidget::hasXvExtension() const
 void QtXvWidget::freeXvImage()
 {
 	if (m_xvImage != 0) {
+		XFreeGC(getDpy(), m_gc);
 		XFree(m_xvImage);
 		m_xvImage = 0;
 	}

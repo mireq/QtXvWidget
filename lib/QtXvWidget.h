@@ -86,6 +86,8 @@ private:
 	QVideoFrame::PixelFormat m_pixelFormat;
 	XvImage *m_xvImage;
 	FormatList m_formats;
+	GC m_gc;
+	QVideoFrame m_frame;
 };
 
 #endif // QTXVWIDGET_H

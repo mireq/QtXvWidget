@@ -60,12 +60,46 @@ void TestWindow::setupAdaptors()
 bool TestWindow::eventFilter(QObject *obj, QEvent *event)
 {
 	if (event->type() == QEvent::Resize) {
-		if (m_xv->pixelFormat() == QVideoFrame::Format_Invalid) {
+		QSize size = static_cast<QResizeEvent *>(event)->size();
+		int w = size.width();
+		int h = size.height();
+		int lineLen = w + w % 2;
+		QVideoFrame::PixelFormat fmt = m_xv->pixelFormat();
+		if (w == 0 || h == 0 || fmt == QVideoFrame::Format_Invalid) {
 			return false;
 		}
-		QSize size = static_cast<QResizeEvent *>(event)->size();
-		QVideoFrame frame(size.width() * size.height() * 2, size, size.width() * 2, m_xv->pixelFormat());
-		frame.map(QAbstractVideoBuffer::ReadWrite);
+		QVideoFrame frame;
+		QImage img = QtXvTestImage().generateImage(w, h);
+		if (fmt == QVideoFrame::Format_YUYV) {
+			frame = QVideoFrame(lineLen * h * 2, size, lineLen * 2, fmt);
+			frame.map(QAbstractVideoBuffer::ReadWrite);
+			size_t offset = 0;
+			int r, g, b = 0;
+			unsigned char y, u, v;
+			QRgb val;
+			for (int row = 0; row < h; ++row) {
+				for (int col = 0; col < w; ++col) {
+					val = img.pixel(col, row);
+					r = qRed(val);
+					g = qGreen(val);
+					b = qBlue(val);
+					y = ((r * 66 + g * 129 + b * 25) >> 8) + 16;
+					u = ((r * (-38) + g * (-74) + b * 112) >> 8) + 128;
+					v = ((r * 112 + g * (-94) + b * (-18)) >> 8) + 128;
+					frame.bits()[(offset + col) * 2] = y;
+					if (col % 2 == 0) {
+						frame.bits()[(offset + col) * 2 + 1] = u;
+					}
+					else {
+						frame.bits()[(offset + col) * 2 + 1] = v;
+					}
+				}
+				offset += lineLen;
+			}
+		}
+		if (!frame.isValid()) {
+			return false;
+		}
 		m_xv->present(frame);
 		return false;
 	}
