@@ -121,8 +121,10 @@ void TestWindow::changeFormat(QAction *format)
 void TestWindow::updateFormats()
 {
 	while (m_formats->actions().count()) {
-		m_formatGroup->removeAction(m_formats->actions().first());
-		m_formats->removeAction(m_formats->actions().first());
+		QAction *action = m_formats->actions().first();
+		m_formatGroup->removeAction(action);
+		m_formats->removeAction(action);
+		action->deleteLater();
 	}
 
 	QtXvWidget::FormatList formats = m_xv->formats();

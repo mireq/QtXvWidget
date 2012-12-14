@@ -344,6 +344,7 @@ void QtXvWidget::ungrabPort()
 void QtXvWidget::updateFormats()
 {
 	clearFormat();
+	m_formats.clear();
 	m_pixelFormat = QVideoFrame::Format_Invalid;
 	int count = 0;
 	XvImageFormatValues *formats = XvListImageFormats(getDpy(), m_port, &count);
