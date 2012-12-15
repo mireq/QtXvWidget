@@ -4,7 +4,10 @@ TEMPLATE = lib
 LIBS += -lXv\
 	-lX11
 DEFINES += QTXV_LIBRARY
-QT += multimedia
+QT += core gui multimedia
+contains(QT_VERSION, ^5\\..*) {
+	QT+= gui-private widgets
+}
 SOURCES += QtXvWidget.cpp\
 	QtXvControlsWidget.cpp\
 	QtXvTestImage.cpp\

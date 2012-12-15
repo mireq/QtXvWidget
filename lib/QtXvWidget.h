@@ -7,7 +7,9 @@
 #include <QVariant>
 #include <QVideoFrame>
 #include <QWidget>
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
 #include <QX11Info>
+#endif
 #include <QtDesigner/QDesignerExportWidget>
 
 
@@ -74,7 +76,7 @@ public:
 	bool present(const QVideoFrame &frame);
 
 signals:
-	void initializedChanged(bool initialized);
+	void initializedChanged();
 
 protected:
 	bool event(QEvent *event);

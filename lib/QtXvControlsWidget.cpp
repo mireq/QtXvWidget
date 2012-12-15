@@ -13,7 +13,7 @@ QtXvControlsWidget::QtXvControlsWidget(QtXvWidget *parent):
 	m_layout = new QGridLayout();
 	m_mapper = new QSignalMapper(this);
 	setLayout(m_layout);
-	connect(m_xv, SIGNAL(initializedChanged(bool)), SLOT(updateControls()));
+	connect(m_xv, SIGNAL(initializedChanged()), SLOT(updateControls()));
 	connect(m_mapper, SIGNAL(mapped(const QString &)), SLOT(valueChanged(const QString &)));
 }
 

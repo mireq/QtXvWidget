@@ -1,4 +1,8 @@
 #include <QApplication>
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
+#include <QWindow>
+#include <qpa/qplatformnativeinterface.h>
+#endif
 #include "QtXvWidget.h"
 
 
@@ -224,7 +228,7 @@ bool QtXvWidget::setAdaptor(const AdaptorInfo &adaptor)
 		if (XvGrabPort(getDpy(), port, CurrentTime) == Success) {
 			m_port = port;
 			updateFormats();
-			emit initializedChanged(isInitialized());
+			emit initializedChanged();
 			return true;
 		}
 	}
@@ -309,7 +313,6 @@ bool QtXvWidget::present(const QVideoFrame &frame)
 	XFreeGC(getDpy(), gc);
 	XFree(image);
 
-	qApp->syncX();
 	return true;
 }
 
@@ -324,7 +327,12 @@ bool QtXvWidget::event(QEvent *event)
 
 Display *QtXvWidget::getDpy() const
 {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
+	QWindow *window = new QWindow(/* screen */);
+	Display *dpy = static_cast<Display *>(qGuiApp->platformNativeInterface()->nativeResourceForWindow("display", window));
+#else
 	Display *dpy = x11Info().display();
+#endif
 	if (!dpy) {
 		qCritical("Could not open display!");
 	}
@@ -354,7 +362,7 @@ void QtXvWidget::ungrabPort()
 	}
 	XvUngrabPort(getDpy(), m_port, CurrentTime);
 	m_port = 0;
-	emit initializedChanged(isInitialized());
+	emit initializedChanged();
 }
 
 void QtXvWidget::updateFormats()
