@@ -76,6 +76,9 @@ public:
 signals:
 	void initializedChanged(bool initialized);
 
+protected:
+	bool event(QEvent *event);
+
 private:
 	Display *getDpy() const;
 	bool hasXvExtension() const;

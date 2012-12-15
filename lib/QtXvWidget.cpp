@@ -313,6 +313,15 @@ bool QtXvWidget::present(const QVideoFrame &frame)
 	return true;
 }
 
+bool QtXvWidget::event(QEvent *event)
+{
+	if (event->type() == QEvent::Resize || event->type() == QEvent::Paint || event->type() == QEvent::Move) {
+		present(m_frame);
+		return QWidget::event(event);
+	}
+	return QWidget::event(event);
+}
+
 Display *QtXvWidget::getDpy() const
 {
 	Display *dpy = x11Info().display();
