@@ -68,7 +68,7 @@ public:
 	int format() const;
 	bool setFormat(int formatId);
 	QVideoFrame::PixelFormat pixelFormat() const;
-	bool setPixelFormat(QVideoFrame::PixelFormat &format);
+	bool setPixelFormat(QVideoFrame::PixelFormat format);
 
 	void setXvAttribute(const QString &attribute, int value);
 	int getXvAttribute(const QString &attribute) const;

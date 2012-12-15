@@ -263,7 +263,7 @@ QVideoFrame::PixelFormat QtXvWidget::pixelFormat() const
 	return QVideoFrame::Format_Invalid;
 }
 
-bool QtXvWidget::setPixelFormat(QVideoFrame::PixelFormat &format)
+bool QtXvWidget::setPixelFormat(QVideoFrame::PixelFormat format)
 {
 	foreach (const PixelFormatInfo &formatInfo, m_formats) {
 		if (formatInfo.format == format) {
