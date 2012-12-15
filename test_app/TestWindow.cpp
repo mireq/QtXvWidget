@@ -127,8 +127,8 @@ void TestWindow::updateFormats()
 		action->deleteLater();
 	}
 
-	QtXvWidget::FormatList formats = m_xv->formats();
-	foreach (const QtXvWidget::PixelFormat &format, formats) {
+	QtXvWidget::PixelFormatList formats = m_xv->formats();
+	foreach (const QtXvWidget::PixelFormatInfo &format, formats) {
 		QAction *action = new QAction(format.name(), this);
 		action->setCheckable(true);
 		if (format.id == m_xv->format()) {

@@ -87,7 +87,7 @@ static const YuvFormatInfo yuv_formatsLookup[] =
 	{ QVideoFrame::Format_Y8,      8 , XvPlanar, 1, 8, 0, 0, 1, 0, 0, 1, 0, 0, "Y"    },
 };
 
-QString QtXvWidget::PixelFormat::name() const
+QString QtXvWidget::PixelFormatInfo::name() const
 {
 	switch (format) {
 		case QVideoFrame::Format_ARGB32:
@@ -121,29 +121,24 @@ QString QtXvWidget::PixelFormat::name() const
 
 QtXvWidget::QtXvWidget(QWidget *parent):
 	QWidget(parent),
-	m_xvInitialized(false),
 	m_port(0),
-	m_format(0),
-	m_pixelFormat(QVideoFrame::Format_Invalid),
-	m_xvImage(0)
+	m_format(0)
 {
 	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-	if (!getDpy() || !hasXvExtension()) {
+	if (!hasXvExtension()) {
 		return;
 	}
-	m_xvInitialized = true;
 }
 
 QtXvWidget::~QtXvWidget()
 {
-	freeXvImage();
 	ungrabPort();
 }
 
 QtXvWidget::AdaptorList QtXvWidget::adaptors() const
 {
 	AdaptorList list;
-	if (!m_xvInitialized) {
+	if (!hasXvExtension()) {
 		return list;
 	}
 
@@ -168,7 +163,7 @@ QtXvWidget::AdaptorList QtXvWidget::adaptors() const
 	return list;
 }
 
-QtXvWidget::FormatList QtXvWidget::formats() const
+QtXvWidget::PixelFormatList QtXvWidget::formats() const
 {
 	return m_formats;
 }
@@ -176,7 +171,7 @@ QtXvWidget::FormatList QtXvWidget::formats() const
 QtXvWidget::AttributeList QtXvWidget::xvAttributes() const
 {
 	AttributeList retAttributes;
-	if (!m_xvInitialized || m_port == 0) {
+	if (!isInitialized()) {
 		return retAttributes;
 	}
 
@@ -203,27 +198,38 @@ QtXvWidget::AttributeList QtXvWidget::xvAttributes() const
 	return retAttributes;
 }
 
-void QtXvWidget::setAdaptor(XvPortID baseId)
+bool QtXvWidget::isInitialized() const
 {
-	if (!m_xvInitialized) {
-		return;
+	return m_port != 0;
+}
+
+bool QtXvWidget::setAdaptor(XvPortID baseId)
+{
+	if (!hasXvExtension()) {
+		return false;
 	}
 	ungrabPort();
 	foreach (const AdaptorInfo &adaptor, adaptors()) {
 		if (adaptor.baseId == baseId) {
-			for (XvPortID port = baseId; port < (baseId + adaptor.numPorts); ++port) {
-				if (XvGrabPort(getDpy(), port, CurrentTime) == Success) {
-					m_port = port;
-					updateFormats();
-					emit portChanged(m_port);
-					return;
-				}
-			}
-			qCritical("No suitable port");
-			return;
+			return setAdaptor(adaptor);
 		}
 	}
 	qCritical("Bad base ID");
+	return false;
+}
+
+bool QtXvWidget::setAdaptor(const AdaptorInfo &adaptor)
+{
+	for (XvPortID port = adaptor.baseId; port < (adaptor.baseId + adaptor.numPorts); ++port) {
+		if (XvGrabPort(getDpy(), port, CurrentTime) == Success) {
+			m_port = port;
+			updateFormats();
+			emit initializedChanged(isInitialized());
+			return true;
+		}
+	}
+	qCritical("No suitable port");
+	return false;
 }
 
 int QtXvWidget::format() const
@@ -231,30 +237,43 @@ int QtXvWidget::format() const
 	return m_format;
 }
 
-void QtXvWidget::setFormat(int formatId)
+bool QtXvWidget::setFormat(int formatId)
 {
-	foreach (const PixelFormat &format, m_formats) {
+	foreach (const PixelFormatInfo &format, m_formats) {
 		if (format.id == formatId) {
 			setFormat(format);
-			return;
+			return true;
 		}
 	}
 	qCritical("Could not find format!");
+	return false;
 }
 
 QVideoFrame::PixelFormat QtXvWidget::pixelFormat() const
 {
-	return m_pixelFormat;
+	foreach (const PixelFormatInfo &format, m_formats) {
+		if (format.id == m_format) {
+			return format.format;
+		}
+	}
+	return QVideoFrame::Format_Invalid;
 }
 
-XvPortID QtXvWidget::port() const
+bool QtXvWidget::setPixelFormat(QVideoFrame::PixelFormat &format)
 {
-	return m_port;
+	foreach (const PixelFormatInfo &formatInfo, m_formats) {
+		if (formatInfo.format == format) {
+			setFormat(formatInfo);
+			return true;
+		}
+	}
+	qCritical("Could not find format!");
+	return false;
 }
 
 void QtXvWidget::setXvAttribute(const QString &attribute, int value)
 {
-	if (!m_xvInitialized || m_port == 0) {
+	if (!isInitialized()) {
 		return;
 	}
 
@@ -265,7 +284,7 @@ void QtXvWidget::setXvAttribute(const QString &attribute, int value)
 
 int QtXvWidget::getXvAttribute(const QString &attribute) const
 {
-	if (!m_xvInitialized || m_port == 0) {
+	if (m_port == 0) {
 		return 0;
 	}
 
@@ -278,20 +297,17 @@ int QtXvWidget::getXvAttribute(const QString &attribute) const
 bool QtXvWidget::present(const QVideoFrame &frame)
 {
 	m_frame = frame;
-	if (!m_xvInitialized || m_port == 0 || frame.pixelFormat() != m_pixelFormat || frame.bits() == 0) {
+	if (!isInitialized() || frame.pixelFormat() != pixelFormat() || frame.bits() == 0) {
 		return false;
 	}
 
-	if (m_xvImage && (m_xvImage->width != frame.width() || m_xvImage->height != frame.height())) {
-		freeXvImage();
-	}
-	if (m_xvImage == 0) {
-		m_xvImage = XvCreateImage(getDpy(), m_port, m_format, const_cast<char *>(reinterpret_cast<const char *>(frame.bits())), frame.width(), frame.height());
-		XGCValues xgcv;
-		m_gc = XCreateGC(getDpy(), winId(), 0L, &xgcv);
-	}
-
-	XvPutImage(getDpy(), m_port, winId(), m_gc, m_xvImage, 0, 0, m_xvImage->width, m_xvImage->height, 0, 0, width(), height());
+	char *bits = const_cast<char *>(reinterpret_cast<const char *>(frame.bits()));
+	XvImage *image = XvCreateImage(getDpy(), m_port, m_format, bits, frame.width(), frame.height());
+	XGCValues xgcv;
+	GC gc = XCreateGC(getDpy(), winId(), 0L, &xgcv);
+	XvPutImage(getDpy(), m_port, winId(), gc, image, 0, 0, image->width, image->height, 0, 0, width(), height());
+	XFreeGC(getDpy(), gc);
+	XFree(image);
 
 	qApp->syncX();
 	return true;
@@ -308,9 +324,12 @@ Display *QtXvWidget::getDpy() const
 
 bool QtXvWidget::hasXvExtension() const
 {
+	Display *dpy = getDpy();
+	if (!dpy) {
+		return false;
+	}
 	unsigned int version, release, request_base, event_base, error_base;
-	if (XvQueryExtension(getDpy(), &version, &release, &request_base, &event_base, &error_base) == Success) {
-		qDebug() << "X-Video Extension" << (QString::number(version) + "." + QString::number(release)).toStdString().c_str();
+	if (XvQueryExtension(dpy, &version, &release, &request_base, &event_base, &error_base) == Success) {
 		return true;
 	}
 	else {
@@ -318,34 +337,20 @@ bool QtXvWidget::hasXvExtension() const
 	}
 }
 
-void QtXvWidget::freeXvImage()
-{
-	if (m_xvImage != 0) {
-		XFreeGC(getDpy(), m_gc);
-		XFree(m_xvImage);
-		m_xvImage = 0;
-	}
-}
-
 void QtXvWidget::ungrabPort()
 {
-	if (!m_xvInitialized || m_port == 0) {
+	clearFormat();
+	if (!isInitialized()) {
 		return;
 	}
 	XvUngrabPort(getDpy(), m_port, CurrentTime);
-	if (m_port != 0) {
-		m_port = 0;
-		emit portChanged(m_port);
-	}
-	clearFormat();
-	m_pixelFormat = QVideoFrame::Format_Invalid;
+	m_port = 0;
+	emit initializedChanged(isInitialized());
 }
 
 void QtXvWidget::updateFormats()
 {
 	clearFormat();
-	m_formats.clear();
-	m_pixelFormat = QVideoFrame::Format_Invalid;
 	int count = 0;
 	XvImageFormatValues *formats = XvListImageFormats(getDpy(), m_port, &count);
 	if (formats) {
@@ -353,14 +358,14 @@ void QtXvWidget::updateFormats()
 			if (formats[i].type == XvRGB) {
 				for (unsigned int j = 0; j < sizeof(rgb_formatsLookup) / sizeof(RgbFormatInfo); ++j) {
 					if (formats[i] == rgb_formatsLookup[j]) {
-						m_formats.append(PixelFormat(formats[i].id, rgb_formatsLookup[j].pixelFormat));
+						m_formats.append(PixelFormatInfo(formats[i].id, rgb_formatsLookup[j].pixelFormat));
 					}
 				}
 			}
 			else if (formats[i].type == XvYUV) {
 				for (unsigned int j = 0; j < sizeof(yuv_formatsLookup) / sizeof(YuvFormatInfo); ++j) {
 					if (formats[i] == yuv_formatsLookup[j]) {
-						m_formats.append(PixelFormat(formats[i].id, yuv_formatsLookup[j].pixelFormat));
+						m_formats.append(PixelFormatInfo(formats[i].id, yuv_formatsLookup[j].pixelFormat));
 					}
 				}
 			}
@@ -372,10 +377,9 @@ void QtXvWidget::updateFormats()
 	}
 }
 
-void QtXvWidget::setFormat(const PixelFormat &format)
+void QtXvWidget::setFormat(const PixelFormatInfo &format)
 {
 	m_format = format.id;
-	m_pixelFormat = format.format;
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
@@ -384,7 +388,7 @@ void QtXvWidget::setFormat(const PixelFormat &format)
 void QtXvWidget::clearFormat()
 {
 	m_format = 0;
-	m_pixelFormat = QVideoFrame::Format_Invalid;
+	m_formats.clear();
 
 	setAttribute(Qt::WA_PaintOnScreen, false);
 	setAttribute(Qt::WA_NoSystemBackground, false);
