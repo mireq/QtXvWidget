@@ -275,6 +275,50 @@ bool QtXvWidget::setPixelFormat(QVideoFrame::PixelFormat format)
 	return false;
 }
 
+QtXvWidget::FormatInfo QtXvWidget::formatInfo() const
+{
+	FormatInfo inf;
+	inf.pixelFormat = QVideoFrame::Format_Invalid;
+	if (!isInitialized()) {
+		return inf;
+	}
+
+	int count;
+	XvImageFormatValues *formats = XvListImageFormats(getDpy(), m_port, &count);
+	if (formats) {
+		for (int i = 0; i < count; ++i) {
+			if (formats[i].id != m_format) {
+				continue;
+			}
+			XvImageFormatValues format = formats[i];
+
+			inf.pixelFormat = pixelFormat();
+
+			inf.bitsPerPixel = format.bits_per_pixel;
+			inf.format = format.format;
+			inf.numPlanes = format.num_planes;
+
+			inf.redMask = format.red_mask;
+			inf.greenMask = format.green_mask;
+			inf.blueMask = format.blue_mask;
+
+			inf.ySampleBits = format.y_sample_bits;
+			inf.uSampleBits = format.u_sample_bits;
+			inf.vSampleBits = format.v_sample_bits;
+			inf.horzYPeriod = format.horz_y_period;
+			inf.horzUPeriod = format.horz_u_period;
+			inf.horzVPeriod = format.horz_v_period;
+			inf.vertYPeriod = format.vert_y_period;
+			inf.vertUPeriod = format.vert_u_period;
+			inf.vertVPeriod = format.vert_v_period;
+
+			break;
+		}
+		XFree(formats);
+	}
+	return inf;
+}
+
 void QtXvWidget::setXvAttribute(const QString &attribute, int value)
 {
 	if (!isInitialized()) {
@@ -288,7 +332,7 @@ void QtXvWidget::setXvAttribute(const QString &attribute, int value)
 
 int QtXvWidget::getXvAttribute(const QString &attribute) const
 {
-	if (m_port == 0) {
+	if (!isInitialized()) {
 		return 0;
 	}
 
@@ -356,10 +400,10 @@ bool QtXvWidget::hasXvExtension() const
 
 void QtXvWidget::ungrabPort()
 {
-	clearFormat();
 	if (!isInitialized()) {
 		return;
 	}
+	clearFormat();
 	XvUngrabPort(getDpy(), m_port, CurrentTime);
 	m_port = 0;
 	emit initializedChanged();

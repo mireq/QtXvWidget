@@ -68,11 +68,13 @@ bool TestWindow::eventFilter(QObject *obj, QEvent *event)
 		if (w == 0 || h == 0 || fmt == QVideoFrame::Format_Invalid) {
 			return false;
 		}
+		QtXvWidget::FormatInfo fmtInfo = m_xv->formatInfo();
+		int bytesPerPixel = fmtInfo.bitsPerPixel / 8;
 		QVideoFrame frame;
 		QImage img = QtXvTestImage().generateImage(w, h);
 		if (fmt == QVideoFrame::Format_YUYV) {
 			lineLen = w + w % 2;
-			frame = QVideoFrame(lineLen * h * 2, size, lineLen * 2, fmt);
+			frame = QVideoFrame(lineLen * h * bytesPerPixel, size, lineLen * bytesPerPixel, fmt);
 			frame.map(QAbstractVideoBuffer::ReadWrite);
 			size_t offset = 0;
 			int r, g, b = 0;
@@ -89,10 +91,10 @@ bool TestWindow::eventFilter(QObject *obj, QEvent *event)
 					v = ((r * 112 + g * (-94) + b * (-18)) >> 8) + 128;
 					frame.bits()[(offset + col) * 2] = y;
 					if (col % 2 == 0) {
-						frame.bits()[(offset + col) * 2 + 1] = u;
+						frame.bits()[(offset + col) * bytesPerPixel + 1] = u;
 					}
 					else {
-						frame.bits()[(offset + col) * 2 + 1] = v;
+						frame.bits()[(offset + col) * bytesPerPixel + 1] = v;
 					}
 				}
 				offset += lineLen;

@@ -24,6 +24,30 @@ class QtXvWidget: public QWidget
 {
 Q_OBJECT
 public:
+	struct FormatInfo {
+		QVideoFrame::PixelFormat pixelFormat;
+
+		int bitsPerPixel;
+		int format;
+		int numPlanes;
+
+		// RGB
+		int depth;
+		unsigned int redMask;
+		unsigned int greenMask;
+		unsigned int blueMask;
+
+		// YUV
+		unsigned int ySampleBits;
+		unsigned int uSampleBits;
+		unsigned int vSampleBits;
+		unsigned int horzYPeriod;
+		unsigned int horzUPeriod;
+		unsigned int horzVPeriod;
+		unsigned int vertYPeriod;
+		unsigned int vertUPeriod;
+		unsigned int vertVPeriod;
+	};
 	struct AdaptorInfo {
 		XvPortID baseId;
 		QString name;
@@ -69,6 +93,7 @@ public:
 	bool setFormat(int formatId);
 	QVideoFrame::PixelFormat pixelFormat() const;
 	bool setPixelFormat(QVideoFrame::PixelFormat format);
+	FormatInfo formatInfo() const;
 
 	void setXvAttribute(const QString &attribute, int value);
 	int getXvAttribute(const QString &attribute) const;
