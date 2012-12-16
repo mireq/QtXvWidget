@@ -374,6 +374,7 @@ Display *QtXvWidget::getDpy() const
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
 	QWindow *window = new QWindow(/* screen */);
 	Display *dpy = static_cast<Display *>(qGuiApp->platformNativeInterface()->nativeResourceForWindow("display", window));
+	delete window;
 #else
 	Display *dpy = x11Info().display();
 #endif
