@@ -163,7 +163,7 @@ QtXvWidget::AdaptorList QtXvWidget::adaptors() const
 			list.append(info);
 		}
 	}
-	XFree(adaptors);
+	XFree(adaptorInfo);
 
 	return list;
 }
