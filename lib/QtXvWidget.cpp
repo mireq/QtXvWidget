@@ -125,6 +125,10 @@ QString QtXvWidget::PixelFormatInfo::name() const
 
 QtXvWidget::QtXvWidget(QWidget *parent):
 	QWidget(parent),
+	m_topBorder(0),
+	m_rightBorder(0),
+	m_bottomBorder(0),
+	m_leftBorder(0),
 	m_port(0),
 	m_format(0)
 {
@@ -235,6 +239,14 @@ bool QtXvWidget::setAdaptor(const AdaptorInfo &adaptor)
 	}
 	qCritical("No suitable port");
 	return false;
+}
+
+void QtXvWidget::setBorder(int top, int right, int bottom, int left)
+{
+	m_topBorder = top;
+	m_rightBorder = right;
+	m_bottomBorder = bottom;
+	m_leftBorder = left;
 }
 
 int QtXvWidget::format() const
@@ -349,12 +361,22 @@ bool QtXvWidget::present(const QVideoFrame &frame)
 	if (!isInitialized() || frame.pixelFormat() != pixelFormat() || frame.bits() == 0) {
 		return false;
 	}
+	if (frame.width() - m_leftBorder - m_rightBorder <= 0) {
+		return false;
+	}
+	if (frame.height() - m_topBorder - m_bottomBorder <= 0) {
+		return false;
+	}
 
 	char *bits = const_cast<char *>(reinterpret_cast<const char *>(frame.bits()));
 	XvImage *image = XvCreateImage(getDpy(), m_port, m_format, bits, frame.width(), frame.height());
 	XGCValues xgcv;
 	GC gc = XCreateGC(getDpy(), winId(), 0L, &xgcv);
-	XvPutImage(getDpy(), m_port, winId(), gc, image, 0, 0, image->width, image->height, 0, 0, width(), height());
+	int imgX = m_leftBorder;
+	int imgY = m_topBorder;
+	int imgW = image->width - m_leftBorder - m_rightBorder;
+	int imgH = image->height - m_topBorder - m_bottomBorder;
+	XvPutImage(getDpy(), m_port, winId(), gc, image, imgX, imgY, imgW, imgH, 0, 0, width(), height());
 	XFreeGC(getDpy(), gc);
 	XFree(image);
 

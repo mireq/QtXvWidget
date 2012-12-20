@@ -89,6 +89,8 @@ public:
 	bool setAdaptor(XvPortID baseId);
 	bool setAdaptor(const AdaptorInfo &adaptor);
 
+	void setBorder(int top, int right, int bottom, int left);
+
 	int format() const;
 	bool setFormat(int formatId);
 	QVideoFrame::PixelFormat pixelFormat() const;
@@ -115,6 +117,11 @@ private:
 	void clearFormat();
 
 private:
+	int m_topBorder;
+	int m_rightBorder;
+	int m_bottomBorder;
+	int m_leftBorder;
+
 	XvPortID m_port;
 	int m_format;
 	PixelFormatList m_formats;
