@@ -6,9 +6,9 @@
 #include "QtXvControlsWidget.h"
 
 
-QtXvControlsWidget::QtXvControlsWidget(QtXvWidget *parent):
+QtXvControlsWidget::QtXvControlsWidget(QtXvWidget *widget, QWidget *parent):
 	QWidget(parent),
-	m_xv(parent)
+	m_xv(widget)
 {
 	m_layout = new QGridLayout();
 	m_mapper = new QSignalMapper(this);

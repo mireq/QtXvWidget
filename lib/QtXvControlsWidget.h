@@ -10,7 +10,7 @@ class QtXvControlsWidget: public QWidget
 {
 Q_OBJECT
 public:
-	QtXvControlsWidget(QtXvWidget *parent = 0);
+	QtXvControlsWidget(QtXvWidget *widget, QWidget *parent = 0);
 	~QtXvControlsWidget();
 
 private slots:
