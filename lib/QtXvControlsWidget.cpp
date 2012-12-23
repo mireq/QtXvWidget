@@ -15,6 +15,7 @@ QtXvControlsWidget::QtXvControlsWidget(QtXvWidget *widget, QWidget *parent):
 	setLayout(m_layout);
 	connect(m_xv, SIGNAL(initializedChanged()), SLOT(updateControls()));
 	connect(m_mapper, SIGNAL(mapped(const QString &)), SLOT(valueChanged(const QString &)));
+	updateControls();
 }
 
 QtXvControlsWidget::~QtXvControlsWidget()
